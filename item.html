@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item Details - Wood & Waves</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="index.html" class="home-link">Wood & Waves</a></h1>
+        <a href="index.html" class="back-link">&larr; Back to all items</a>
+    </header>
+    <main>
+        <div id="loading">Loading item details...</div>
+        <div id="item-details" class="item-container"></div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Trigger the specific function for the item details page
+        window.onload = loadItemDetails;
+    </script>
+</body>
+</html>
