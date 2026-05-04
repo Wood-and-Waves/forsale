@@ -4,7 +4,7 @@ const contactEmail = "dan@woodandwaves.com";
 
 const githubUsername = "wood-and-waves"; 
 const githubRepo = "forsale";           
-const githubBranch = "main"; // Note: If your default branch is called "master" instead of "main", change this word.
+const githubBranch = "main"; 
 
 // --- THE ENGINE ---
 let repoFiles = [];
@@ -16,7 +16,6 @@ async function fetchRepoMap() {
         const data = await response.json();
         
         if (data.tree) {
-            // Filter out everything except files inside the "images" folder
             repoFiles = data.tree.filter(file => file.path.startsWith('images/') && file.type === 'blob');
         }
     } catch (error) {
@@ -37,11 +36,11 @@ function fetchInventory(callback) {
     });
 }
 
-// Step 3: Load the Homepage
+// Step 3: Load the Homepage (UPDATED FOR SMART COVERS)
 async function loadHomepage() {
     if(!document.getElementById('product-list')) return;
 
-    await fetchRepoMap(); // Wait for the GitHub map to load
+    await fetchRepoMap(); 
 
     fetchInventory(function(data) {
         document.getElementById('loading').style.display = 'none';
@@ -52,14 +51,19 @@ async function loadHomepage() {
             if (item.Status && item.Status.trim().toLowerCase() === 'sold') return;
 
             const folderName = item.Image ? item.Image.trim() : '';
-            
-            // Find all images in the GitHub map that match this folder name
             const itemImages = repoFiles.filter(file => file.path.startsWith(`images/${folderName}/`));
             
-            // Grab the first image found to use as the cover photo, or a placeholder if none exist
-            const firstImage = itemImages.length > 0 ? itemImages[0].path : '';
-            // We use jsdelivr to serve the raw GitHub files securely
-            const imageSrc = firstImage ? `https://cdn.jsdelivr.net/gh/${githubUsername}/${githubRepo}@${githubBranch}/${firstImage}` : 'https://via.placeholder.com/250?text=No+Image';
+            let targetImagePath = '';
+            
+            if (itemImages.length > 0) {
+                // NEW LOGIC: Look for a file with "cover" in the name
+                const coverImage = itemImages.find(img => img.path.toLowerCase().includes('cover'));
+                
+                // If we found a cover image, use it. Otherwise, default to the first image in the folder.
+                targetImagePath = coverImage ? coverImage.path : itemImages[0].path;
+            }
+
+            const imageSrc = targetImagePath ? `https://cdn.jsdelivr.net/gh/${githubUsername}/${githubRepo}@${githubBranch}/${targetImagePath}` : 'https://via.placeholder.com/250?text=No+Image';
 
             const card = document.createElement('div');
             card.className = 'card';
@@ -84,7 +88,7 @@ async function loadItemDetails() {
         return;
     }
 
-    await fetchRepoMap(); // Wait for the GitHub map to load
+    await fetchRepoMap(); 
 
     fetchInventory(function(data) {
         document.getElementById('loading').style.display = 'none';
@@ -102,7 +106,6 @@ async function loadItemDetails() {
             
             let imagesHTML = '';
             if (itemImages.length > 0) {
-                // Loop through every image found in that folder and add it to the gallery
                 itemImages.forEach(img => {
                     const imgSrc = `https://cdn.jsdelivr.net/gh/${githubUsername}/${githubRepo}@${githubBranch}/${img.path}`;
                     imagesHTML += `<img src="${imgSrc}" alt="${item.Name}">`;
@@ -128,7 +131,6 @@ async function loadItemDetails() {
     });
 }
 
-// Fire the correct function based on the page
 if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === '') {
     window.onload = loadHomepage;
 } else if (window.location.pathname.endsWith('item.html')) {
