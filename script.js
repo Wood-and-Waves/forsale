@@ -6,11 +6,17 @@ const githubUsername = "wood-and-waves";
 const githubRepo = "forsale";           
 const githubBranch = "main"; 
 
-// --- THE ENGINE (SPEED UPGRADED) ---
+// --- THE ENGINE (Fully Optimized with Caching & Navigation) ---
+
+// Helper: Numerical Sort Function (ensures consistent order across pages)
+function numericalIDSort(a, b) {
+    const idA = parseFloat(a.ID) || 0;
+    const idB = parseFloat(b.ID) || 0;
+    return idA - idB; 
+}
 
 // Step 1: Get GitHub Map (with memory)
 async function fetchRepoMap() {
-    // Check if the browser already memorized the map
     const cachedMap = sessionStorage.getItem('woodAndWavesMap');
     if (cachedMap) return JSON.parse(cachedMap);
 
@@ -20,7 +26,6 @@ async function fetchRepoMap() {
         
         if (data.tree) {
             const files = data.tree.filter(file => file.path.startsWith('images/') && file.type === 'blob');
-            // Save to memory for the next page click
             sessionStorage.setItem('woodAndWavesMap', JSON.stringify(files));
             return files;
         }
@@ -33,7 +38,6 @@ async function fetchRepoMap() {
 // Step 2: Get Google Sheet Inventory (with memory)
 function fetchInventory() {
     return new Promise((resolve, reject) => {
-        // Check if the browser already memorized the inventory
         const cachedData = sessionStorage.getItem('woodAndWavesInventory');
         if (cachedData) {
             resolve(JSON.parse(cachedData));
@@ -44,7 +48,6 @@ function fetchInventory() {
             download: true,
             header: true,
             complete: function(results) { 
-                // Save to memory for the next page click
                 sessionStorage.setItem('woodAndWavesInventory', JSON.stringify(results.data));
                 resolve(results.data); 
             },
@@ -57,17 +60,19 @@ function fetchInventory() {
     });
 }
 
-// Step 3: Load the Homepage Fast
+// Step 3: Load the Homepage (Numerical ID sorting)
 async function loadHomepage() {
     if(!document.getElementById('product-list')) return;
 
-    // Multitasking: Fetch Google and GitHub at the EXACT same time
-    const [repoFiles, data] = await Promise.all([fetchRepoMap(), fetchInventory()]);
+    const [repoFiles, rawData] = await Promise.all([fetchRepoMap(), fetchInventory()]);
+
+    // NEW LOGIC: Sort the data numerically by ID
+    const sortedData = rawData.sort(numericalIDSort);
 
     document.getElementById('loading').style.display = 'none';
     const container = document.getElementById('product-list');
 
-    data.forEach(item => {
+    sortedData.forEach(item => {
         if (!item.ID || !item.Name) return;
         if (item.Status && item.Status.trim().toLowerCase() === 'sold') return;
 
@@ -95,7 +100,7 @@ async function loadHomepage() {
     });
 }
 
-// Step 4: Load the Item Details Page Fast
+// Step 4: Load the Item Details Page (NOW WITH NAVIGATION)
 async function loadItemDetails() {
     const urlParams = new URLSearchParams(window.location.search);
     const itemId = urlParams.get('id');
@@ -105,19 +110,22 @@ async function loadItemDetails() {
         return;
     }
 
-    // Multitasking: Fetch Google and GitHub at the EXACT same time
-    const [repoFiles, data] = await Promise.all([fetchRepoMap(), fetchInventory()]);
+    const [repoFiles, rawData] = await Promise.all([fetchRepoMap(), fetchInventory()]);
 
     document.getElementById('loading').style.display = 'none';
-    const container = document.getElementById('item-details');
-    const item = data.find(row => row.ID === itemId);
+    const mainContainer = document.getElementById('item-details');
+    const navContainer = document.getElementById('item-nav');
+
+    const item = rawData.find(row => row.ID === itemId);
 
     if (item) {
         if (item.Status && item.Status.trim().toLowerCase() === 'sold') {
-            container.innerHTML = "<h2>Item Sold</h2><p>Sorry, this item has already been sold and is no longer available.</p>";
+            mainContainer.innerHTML = "<h2>Item Sold</h2><p>Sorry, this item has already been sold and is no longer available.</p>";
+            navContainer.style.display = 'none'; // Hide nav on sold page
             return;
         }
 
+        // --- Render Item Details ---
         const folderName = item.Image ? item.Image.trim() : '';
         const itemImages = repoFiles.filter(file => file.path.startsWith(`images/${folderName}/`));
         
@@ -131,7 +139,7 @@ async function loadItemDetails() {
             imagesHTML = `<img src="https://via.placeholder.com/500?text=No+Image" alt="No images found">`;
         }
 
-        container.innerHTML = `
+        mainContainer.innerHTML = `
             <div class="item-image gallery">
                 ${imagesHTML}
             </div>
@@ -142,8 +150,48 @@ async function loadItemDetails() {
                 <a href="mailto:${contactEmail}?subject=Wood & Waves Inquiry: ${item.Name}" class="btn" style="background-color: #e67e22;">Contact to Buy</a>
             </div>
         `;
+
+        // --- Render Next/Previous Navigation (NEW LOGIC) ---
+        
+        // Filter out sold items so navigation only points to available gear
+        const availableData = rawData.filter(i => {
+            if (!i.ID || !i.Name) return false;
+            if (i.Status && i.Status.trim().toLowerCase() === 'sold') return false;
+            return true;
+        });
+
+        // Ensure navigation order matches the homepage sort
+        const sortedAvailable = availableData.sort(numericalIDSort);
+
+        // Find current item index
+        const currentIndex = sortedAvailable.findIndex(i => i.ID === itemId);
+        
+        if (currentIndex !== -1) {
+            const prevItem = sortedAvailable[currentIndex - 1];
+            const nextItem = sortedAvailable[currentIndex + 1];
+
+            let navHTML = '';
+            
+            if (prevItem) {
+                // Shorten name if it's too long for the button
+                const prevName = prevItem.Name.length > 30 ? prevItem.Name.substring(0, 27) + '...' : prevItem.Name;
+                const extraClass = (!nextItem) ? 'only-prev' : ''; // Special alignment CSS
+                navHTML += `<a href="item.html?id=${prevItem.ID}" class="nav-btn ${extraClass}">&larr; Previous: ${prevName}</a>`;
+            }
+
+            if (nextItem) {
+                // Shorten name if it's too long for the button
+                const nextName = nextItem.Name.length > 30 ? nextItem.Name.substring(0, 27) + '...' : nextItem.Name;
+                const extraClass = (!prevItem) ? 'only-next' : ''; // Special alignment CSS
+                navHTML += `<a href="item.html?id=${nextItem.ID}" class="nav-btn ${extraClass}">Next: ${nextName} &rarr;</a>`;
+            }
+
+            navContainer.innerHTML = navHTML;
+        }
+
     } else {
-        container.innerHTML = "<p>Item not found.</p>";
+        mainContainer.innerHTML = "<p>Item not found.</p>";
+        navContainer.style.display = 'none';
     }
 }
 
