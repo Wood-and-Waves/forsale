@@ -152,7 +152,7 @@ async function loadItemDetails() {
                 <h2>${item.Name}</h2>
                 <div class="price">${item.Price}</div>
                 <p>${item.Description}</p>
-                <a href="mailto:${contactEmail}?subject=Wood & Waves Inquiry: ${item.Name}" class="btn" style="background-color: #e67e22;">Contact to Buy</a>
+                <a href="mailto:${contactEmail}?subject=Item Inquiry: ${item.Name}" class="btn" style="background-color: #e67e22;">Contact to Buy</a>
             </div>
         `;
 
