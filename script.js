@@ -60,13 +60,12 @@ function fetchInventory() {
     });
 }
 
-// Step 3: Load the Homepage (Numerical ID sorting)
+// Step 3: Load the Homepage (NOW WITH CLICKABLE CARDS)
 async function loadHomepage() {
     if(!document.getElementById('product-list')) return;
 
     const [repoFiles, rawData] = await Promise.all([fetchRepoMap(), fetchInventory()]);
 
-    // NEW LOGIC: Sort the data numerically by ID
     const sortedData = rawData.sort(numericalIDSort);
 
     document.getElementById('loading').style.display = 'none';
@@ -88,18 +87,24 @@ async function loadHomepage() {
 
         const imageSrc = targetImagePath ? `https://cdn.jsdelivr.net/gh/${githubUsername}/${githubRepo}@${githubBranch}/${targetImagePath}` : 'https://via.placeholder.com/250?text=No+Image';
 
-        const card = document.createElement('div');
+        // NEW LOGIC: Make the entire card a clickable link
+        const card = document.createElement('a'); 
+        card.href = `item.html?id=${item.ID}`;
         card.className = 'card';
+        card.style.textDecoration = 'none'; // Prevents link underlines
+        card.style.color = 'inherit';       // Keeps the text color normal
+        card.style.display = 'block';       // Ensures the box stays a box
+
+        // Note: The "View Details" link is now a <span> so it doesn't conflict with the main card link
         card.innerHTML = `
             <img src="${imageSrc}" alt="${item.Name}">
             <h2>${item.Name}</h2>
             <div class="price">${item.Price}</div>
-            <a href="item.html?id=${item.ID}" class="btn">View Details</a>
+            <span class="btn">View Details</span> 
         `;
         container.appendChild(card);
     });
 }
-
 // Step 4: Load the Item Details Page (NOW WITH NAVIGATION)
 async function loadItemDetails() {
     const urlParams = new URLSearchParams(window.location.search);
