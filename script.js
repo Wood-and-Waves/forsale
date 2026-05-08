@@ -15,7 +15,7 @@ function numericalIDSort(a, b) {
     return idA - idB; 
 }
 
-// Step 1: Get GitHub Map (with memory)
+// Step 1: Get GitHub Map (with memory & hidden file filter)
 async function fetchRepoMap() {
     const cachedMap = sessionStorage.getItem('woodAndWavesMap');
     if (cachedMap) return JSON.parse(cachedMap);
@@ -25,7 +25,18 @@ async function fetchRepoMap() {
         const data = await response.json();
         
         if (data.tree) {
-            const files = data.tree.filter(file => file.path.startsWith('images/') && file.type === 'blob');
+            // NEW LOGIC: Only grab files that end in actual image extensions
+            const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+            
+            const files = data.tree.filter(file => {
+                const isFile = file.type === 'blob';
+                const inImagesFolder = file.path.startsWith('images/');
+                // Check if the file ends with one of our valid extensions
+                const isRealImage = validExtensions.some(ext => file.path.toLowerCase().endsWith(ext));
+                
+                return isFile && inImagesFolder && isRealImage;
+            });
+            
             sessionStorage.setItem('woodAndWavesMap', JSON.stringify(files));
             return files;
         }
